@@ -67,7 +67,8 @@ if(KVBM_BUILD_TESTS)
     tests/allocate_test.cpp
     tests/append_test.cpp
     tests/eviction_test.cpp
-    tests/collision_test.cpp)
+    tests/collision_test.cpp
+    tests/invariants_test.cpp)
   target_link_libraries(kvbm_tests PRIVATE kvbm GTest::gtest_main)
   kvbm_warnings(kvbm_tests)
   include(GoogleTest)
