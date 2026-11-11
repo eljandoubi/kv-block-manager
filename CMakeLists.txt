@@ -63,7 +63,9 @@ if(KVBM_BUILD_TESTS)
   endforeach()
 
   add_executable(kvbm_tests
-    tests/hash_test.cpp)
+    tests/hash_test.cpp
+    tests/allocate_test.cpp
+    tests/append_test.cpp)
   target_link_libraries(kvbm_tests PRIVATE kvbm GTest::gtest_main)
   kvbm_warnings(kvbm_tests)
   include(GoogleTest)
