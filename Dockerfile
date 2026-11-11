@@ -8,7 +8,7 @@ COPY src ./src
 COPY tests ./tests
 COPY bench ./bench
 COPY examples ./examples
-ENV CXX=g++-13
+ENV CC=gcc-13 CXX=g++-13
 RUN cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DKVBM_WERROR=ON \
     && cmake --build build -j"$(nproc)" \
     && ./build/kvbm_tests --gtest_brief=1
