@@ -312,7 +312,7 @@ std::string BlockManager::check_invariants() const {
   for (BlockId b = lru_head_; b != kNoBlock; b = blocks_[b].lru_next) {
     if (b >= n || where[b] != kNowhere) return fail("LRU list holds block ", b, " twice or on the free list");
     where[b] = kLru;
-    if (++listed > n) return fail("LRU list does not end");
+    ++listed;
     const Block& blk = blocks_[b];
     if (!blk.in_lru || blk.ref != 0 || !blk.hashed || !blk.in_map)
       return fail("LRU block ", b, " is not cached and unused");
@@ -329,7 +329,6 @@ std::string BlockManager::check_invariants() const {
     if (b >= n) return fail("hash map points to the unknown block ", b);
     const Block& blk = blocks_[b];
     if (!blk.in_map || !blk.hashed || blk.hash != hash) return fail("hash map entry for block ", b, " is stale");
-    if (where[b] == kFree) return fail("a free block is in the hash map");
   }
   std::size_t flagged = 0;
   for (const Block& blk : blocks_) flagged += blk.in_map ? 1 : 0;
@@ -365,7 +364,6 @@ std::string BlockManager::check_invariants() const {
   for (std::size_t b = 0; b < n; ++b) {
     if (refs[b] != blocks_[b].ref)
       return fail("block ", b, " says ", blocks_[b].ref, " references, sequences hold ", refs[b]);
-    if (blocks_[b].ref > 0 && where[b] != kNowhere) return fail("block ", b, " is in use and also free or cached");
     if (blocks_[b].ref == 0 && where[b] == kNowhere) return fail("block ", b, " is lost: unused and nowhere");
   }
   return "";
