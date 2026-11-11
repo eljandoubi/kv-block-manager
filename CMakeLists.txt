@@ -75,3 +75,13 @@ if(KVBM_BUILD_TESTS)
   include(GoogleTest)
   gtest_discover_tests(kvbm_tests)
 endif()
+
+if(KVBM_BUILD_BENCH)
+  add_executable(kvbm_bench bench/bench.cpp)
+  target_link_libraries(kvbm_bench PRIVATE kvbm)
+  kvbm_warnings(kvbm_bench)
+
+  add_executable(kvbm_simulate examples/simulate.cpp)
+  target_link_libraries(kvbm_simulate PRIVATE kvbm)
+  kvbm_warnings(kvbm_simulate)
+endif()
