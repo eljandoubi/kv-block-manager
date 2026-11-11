@@ -121,13 +121,27 @@ TEST(Invariants, AFreeBlockInTheHashMapIsFound) {
   auto m = healthy();
   const BlockId empty = Access::free_list(m).back();
   Access::by_hash(m)[777] = empty;
-  EXPECT_FALSE(m.check_invariants().empty());
+  EXPECT_TRUE(complains(m, "stale"));
 }
 
 TEST(Invariants, ABlockThatClaimsAMapEntryItDoesNotHaveIsFound) {
   auto m = healthy();
+  Access::blocks(m)[m.block_table(1)[2]].in_map = true;  // the partial block of sequence 1
+  EXPECT_TRUE(complains(m, "claim one"));
+}
+
+TEST(Invariants, ACachedBlockMissingFromTheHashMapIsFound) {
+  auto m = healthy();
   Access::by_hash(m).clear();
-  EXPECT_FALSE(m.check_invariants().empty());
+  EXPECT_TRUE(complains(m, "holder of its hash"));
+}
+
+TEST(Invariants, ACachedBlockWhoseHashPointsAtAnotherBlockIsFound) {
+  auto m = healthy();
+  for (const auto& b : Access::blocks(m)) {
+    if (b.in_lru) Access::by_hash(m)[b.hash] = m.block_table(1)[0];
+  }
+  EXPECT_TRUE(complains(m, "holder of its hash"));
 }
 
 TEST(Invariants, ATableOfTheWrongLengthIsFound) {
@@ -148,16 +162,22 @@ TEST(Invariants, ABlockWithTheWrongNumberOfTokensIsFound) {
   EXPECT_TRUE(complains(m, "tokens, not"));
 }
 
-TEST(Invariants, AFullBlockWithAWrongChainHashIsFound) {
+TEST(Invariants, AFullBlockWhoseHashDiffersFromItsMapEntryIsFound) {
   auto m = healthy();
   Access::blocks(m)[m.block_table(1)[1]].hash ^= 1;
-  EXPECT_FALSE(m.check_invariants().empty());
+  EXPECT_TRUE(complains(m, "stale"));
 }
 
 TEST(Invariants, AFullBlockThatIsNotHashedIsFound) {
   auto m = healthy();
   Access::blocks(m)[m.block_table(1)[1]].hashed = false;
-  EXPECT_FALSE(m.check_invariants().empty());
+  EXPECT_TRUE(complains(m, "stale"));
+}
+
+TEST(Invariants, AFullBlockWithAWrongParentHashIsFound) {
+  auto m = healthy();
+  Access::blocks(m)[m.block_table(1)[1]].parent_hash ^= 1;
+  EXPECT_TRUE(complains(m, "wrong chain hash"));
 }
 
 TEST(Invariants, APartialBlockThatIsHashedIsFound) {
@@ -172,11 +192,20 @@ TEST(Invariants, AWrongLastHashOfASequenceIsFound) {
   EXPECT_TRUE(complains(m, "last hash"));
 }
 
-TEST(Invariants, ABlockInUseThatIsAlsoCachedIsFound) {
+TEST(Invariants, AnLruBlockThatIsAlsoOnTheFreeListIsFound) {
   auto m = healthy();
-  // pretend a block that sequence 1 holds is also on the free list
-  Access::free_list(m).push_back(m.block_table(1)[1]);
-  EXPECT_FALSE(m.check_invariants().empty());
+  for (auto& b : Access::blocks(m)) {
+    if (b.in_lru) b.lru_next = Access::free_list(m).back();
+  }
+  EXPECT_TRUE(complains(m, "twice or on the free list"));
+}
+
+TEST(Invariants, AnLruBlockThatIsNotCachedIsFound) {
+  auto m = healthy();
+  for (auto& b : Access::blocks(m)) {
+    if (b.in_lru) b.in_map = false;
+  }
+  EXPECT_TRUE(complains(m, "not cached and unused"));
 }
 
 TEST(Invariants, WithTheCacheOffTheChainIsNotChecked) {
