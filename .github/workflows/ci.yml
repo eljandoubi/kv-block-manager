@@ -1,0 +1,81 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: gcc-13, os: ubuntu-24.04, cxx: g++-13 }
+          - { name: clang-18, os: ubuntu-24.04, cxx: clang++-18 }
+          - { name: apple-clang, os: macos-latest, cxx: clang++ }
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DKVBM_WERROR=ON -DCMAKE_CXX_COMPILER=${{ matrix.cxx }}
+      - run: cmake --build build -j 4
+      - run: ctest --test-dir build --output-on-failure
+      - name: the simulator and the benchmark run
+        run: |
+          ./build/kvbm_simulate --requests 300
+          ./build/kvbm_bench
+
+  sanitizers:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DKVBM_SANITIZE=ON -DKVBM_WERROR=ON -DCMAKE_CXX_COMPILER=clang++-18
+      - run: cmake --build build -j 4
+      - run: ./build/kvbm_tests --gtest_brief=1
+      - run: ./build/kvbm_simulate --requests 200
+
+  format-and-tidy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install clang-format==23.1.5 clang-tidy==23.1.4
+      - run: clang-format --dry-run --Werror include/kvbm/*.hpp src/*.cpp tests/*.cpp tests/*.hpp bench/*.cpp examples/*.cpp
+      - run: cmake -S . -B build -DKVBM_BUILD_TESTS=OFF
+      - run: clang-tidy -p build src/block_manager.cpp bench/bench.cpp examples/simulate.cpp
+
+  coverage:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install gcovr
+      - run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DKVBM_COVERAGE=ON -DKVBM_BUILD_BENCH=OFF -DCMAKE_CXX_COMPILER=g++-13
+      - run: cmake --build build -j 4
+      - run: ./build/kvbm_tests --gtest_brief=1
+      - run: gcovr -r . --gcov-executable gcov-13 --filter 'src/' --filter 'include/' --merge-mode-functions=merge-use-line-min --txt --fail-under-line 95
+
+  mutation:
+    if: github.event_name == 'push'
+    needs: build-test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/mutate.py
+
+  docker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t kv-block-manager .
+      - name: run as the non-root user
+        run: |
+          test "$(docker run --rm --entrypoint id kv-block-manager -u)" = 10001
+          docker run --rm kv-block-manager --requests 300 | tee out.txt
+          grep -q "decode steps to finish" out.txt
