@@ -80,8 +80,11 @@ MUTANTS: list[tuple[str, str, str, str, str]] = [
     ("M28", "src/block_manager.cpp", "  ++stats_.evictions;\n", "", "evictions are not counted"),
     ("M29", "src/block_manager.cpp", "stats_.lookup_blocks += p.full_blocks;", "stats_.lookup_blocks += p.hits.size();",
      "the hit rate is always one"),
-    ("M30", "include/kvbm/hash.hpp", "std::uint64_t h = parent;", "std::uint64_t h = kRootHash ^ (parent & 0U);",
+    ("M30", "include/kvbm/hash.hpp", "return mix64(parent ^ hash_tokens(tokens));", "return mix64(hash_tokens(tokens));",
      "the hash ignores the prefix"),
+    ("M31", "include/kvbm/hash.hpp", "for (const TokenId t : tokens) {\n    h = mix64",
+     "for (const TokenId t : tokens.first(tokens.empty() ? 0 : tokens.size() - 1)) {\n    h = mix64",
+     "the hash ignores the last token of a block"),
 ]
 
 

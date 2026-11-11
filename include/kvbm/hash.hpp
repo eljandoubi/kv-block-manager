@@ -19,15 +19,21 @@ constexpr std::uint64_t mix64(std::uint64_t x) noexcept {
   return x ^ (x >> 31);
 }
 
-// Hash of one block of tokens that follows a prefix whose hash is `parent`. Two blocks with the same
-// tokens but different prefixes get different hashes, because KV values depend on everything before
-// them, not just on the block's own tokens.
-constexpr std::uint64_t hash_block(std::uint64_t parent, std::span<const TokenId> tokens) noexcept {
-  std::uint64_t h = parent;
+// Hash of the tokens of one block on their own, without the prefix. Blocks do not wait for each
+// other here, so the CPU can hash several blocks of a long prompt at the same time.
+constexpr std::uint64_t hash_tokens(std::span<const TokenId> tokens) noexcept {
+  std::uint64_t h = 0;
   for (const TokenId t : tokens) {
     h = mix64(h ^ static_cast<std::uint32_t>(t));
   }
-  return mix64(h ^ static_cast<std::uint64_t>(tokens.size()));
+  return h;
+}
+
+// Hash of one block of tokens that follows a prefix whose hash is `parent`. Two blocks with the same
+// tokens but different prefixes get different hashes, because KV values depend on everything before
+// them, not just on the block's own tokens. Only this last mix waits for the previous block.
+constexpr std::uint64_t hash_block(std::uint64_t parent, std::span<const TokenId> tokens) noexcept {
+  return mix64(parent ^ hash_tokens(tokens));
 }
 
 }  // namespace kvbm

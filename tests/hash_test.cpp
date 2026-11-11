@@ -9,6 +9,7 @@
 #include <vector>
 
 using kvbm::hash_block;
+using kvbm::hash_tokens;
 using kvbm::kRootHash;
 using kvbm::mix64;
 using kvbm::TokenId;
@@ -57,6 +58,19 @@ TEST(Hash, ChainingMakesAPrefixPartOfTheIdentity) {
   const auto ha = hash_block(hash_block(kRootHash, first_a), second);
   const auto hb = hash_block(hash_block(kRootHash, first_b), second);
   EXPECT_NE(ha, hb);
+}
+
+TEST(Hash, TheOrderOfTwoBlocksMatters) {
+  const std::vector<TokenId> a = {1, 2}, b = {3, 4};
+  EXPECT_NE(hash_block(hash_block(kRootHash, a), b), hash_block(hash_block(kRootHash, b), a));
+}
+
+TEST(Hash, TheBlockHashIsTheTokenHashFoldedIntoTheParent) {
+  const std::vector<TokenId> t = {5, 6, 7, 8};
+  for (const std::uint64_t parent : {std::uint64_t{0}, kRootHash, ~std::uint64_t{0}}) {
+    EXPECT_EQ(hash_block(parent, t), mix64(parent ^ hash_tokens(t)));
+  }
+  EXPECT_NE(hash_tokens(t), hash_tokens(std::vector<TokenId>{5, 6, 7, 9}));
 }
 
 TEST(Hash, FlippingOneBitOfOneTokenChangesAboutHalfTheOutputBits) {
