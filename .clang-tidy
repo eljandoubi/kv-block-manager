@@ -1,0 +1,16 @@
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-signed-bitwise,
+  performance-*,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  -modernize-use-nodiscard,
+  readability-container-size-empty,
+  readability-redundant-*,
+  readability-misleading-indentation,
+  cppcoreguidelines-slicing,
+  cppcoreguidelines-missing-std-forward
+WarningsAsErrors: '*'
+HeaderFilterRegex: 'include/kvbm/.*'
