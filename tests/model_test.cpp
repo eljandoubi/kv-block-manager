@@ -106,7 +106,9 @@ class Fuzzer {
       } else {
         EXPECT_LT(r.cached_tokens, prompt.size());
       }
-      if (!p_.cache) EXPECT_EQ(r.cached_tokens, 0u);
+      if (!p_.cache) {
+        EXPECT_EQ(r.cached_tokens, 0u);
+      }
       for (std::size_t i = 0; i < r.cached_tokens / p_.block_size; ++i) {  // reused blocks hold the prompt's own tokens
         const auto held = m_.block_tokens(m_.block_table(id)[i]);
         EXPECT_TRUE(
@@ -201,9 +203,9 @@ INSTANTIATE_TEST_SUITE_P(Pools, Randomized,
                                            Params{6, 3, true, 2},  // two token values: many repeated blocks
                                            Params{64, 8, true, 6}, Params{12, 1, true, 3},  // block size one
                                            Params{5, 16, true, 5}),  // blocks bigger than most prompts
-                         [](const ::testing::TestParamInfo<Params>& info) {
-                           return "blocks" + std::to_string(info.param.blocks) + "_size" +
-                                  std::to_string(info.param.block_size) + (info.param.cache ? "_cache" : "_nocache");
+                         [](const ::testing::TestParamInfo<Params>& param) {
+                           return "blocks" + std::to_string(param.param.blocks) + "_size" +
+                                  std::to_string(param.param.block_size) + (param.param.cache ? "_cache" : "_nocache");
                          });
 
 }  // namespace
