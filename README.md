@@ -97,7 +97,7 @@ at least one token to get logits, and writing to a shared block would need a cop
 
 ## Tests
 
-93 tests, built with `-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Werror`:
+97 tests, built with `-Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Werror`:
 
 - unit tests for each rule: sharing, the last-token rule, chaining, eviction order, copy-on-write,
   forks, atomic failure;
@@ -108,7 +108,7 @@ at least one token to get logits, and writing to a shared block would need a cop
 - **collision tests** with hash functions that collide on purpose: a reused block must have the
   same tokens and the same parent hash, not only the same hash;
 - **tests of the checker**: each damages one thing inside a healthy manager and expects the checker
-  to notice;
+  to say what is wrong; every failure it can report has one;
 - the whole suite also runs under AddressSanitizer and UndefinedBehaviorSanitizer;
 - `scripts/mutate.py` changes one line at a time in a copy of the library (31 mutants: an eviction
   order, a reference count, a missing check, a lost statistic) and runs the tests: all are killed.
@@ -116,8 +116,9 @@ at least one token to get logits, and writing to a shared block would need a cop
   mutant that matters. One mutant is caught by a `static_assert` in the tests, which stops them from
   compiling.
 
-Line coverage is 98 percent (the rest is the unreachable `return "?"` of a `switch` and a few error
-paths of the checker).
+Line coverage is 97 percent as GCC's gcov counts it in CI, which fails below 95 (99 percent with
+Apple clang's). The lines not run are the unreachable `return "?"` after a `switch` and, for GCC,
+exception clean-up paths.
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DKVBM_WERROR=ON
